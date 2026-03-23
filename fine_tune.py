@@ -46,27 +46,27 @@ total = sum(p.numel() for p in model.parameters())
 
 print(f"Trainable: {trainable} / {total}")
 
-dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
+# dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
 
-optimizer = torch.optim.AdamW(
-    filter(lambda p: p.requires_grad, model.parameters()),
-    lr=1e-4
-)
+# optimizer = torch.optim.AdamW(
+#     filter(lambda p: p.requires_grad, model.parameters()),
+#     lr=1e-4
+# )
 
-for epoch in range(10):
-    for batch in dataloader:
-        batch = batch.to(device)
+# for epoch in range(10):
+#     for batch in dataloader:
+#         batch = batch.to(device)
 
-        pred = model(batch)
+#         pred = model(batch)
 
-        loss = loss_fn(pred, batch)
+#         loss = loss_fn(pred, batch)
 
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+#         optimizer.zero_grad()
+#         loss.backward()
+#         optimizer.step()
 
-    print(f"Epoch {epoch}, Loss: {loss.item()}")
+#     print(f"Epoch {epoch}, Loss: {loss.item()}")
 
-torch.save(model.state_dict(), "aurora_lora_finetuned.pt")
+# torch.save(model.state_dict(), "aurora_lora_finetuned.pt")
 
-dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
+# dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
