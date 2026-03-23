@@ -32,8 +32,15 @@ def loss_fn(pred, target):
     
     return loss
 
-model = AuroraPretrained(use_lora=True).to(device)
-model.load_checkpoint()
+# 1. 先加载原始模型
+base_model = AuroraPretrained(use_lora=False).to(device)
+base_model.load_checkpoint()
+
+# 2. 再创建带 LoRA 的模型
+model = AuroraPretrained(use_lora=True)
+
+# 3. 加载 backbone 权重（忽略 LoRA）
+model.load_state_dict(base_model.state_dict(), strict=False)
 
 model.train()
 
