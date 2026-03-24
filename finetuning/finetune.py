@@ -45,16 +45,18 @@ print(f"Trainable rate: {trainable} / {total}")
 opt = torch.optim.AdamW(model.parameters(), lr=3e-4)
 
 zarr_path = '/mnt/era5/era5.zarr/'
-ds = xr.open_dataset(zarr_path, engine="zarr", chunks={})
+xarr = xr.open_dataset(zarr_path, engine="zarr", chunks="auto")
+xarr = xarr.sel(time=slice('2019-01-01', '2019-01-10'))
+
 
 for i in range(10):
     print(f"Step {i}")
 
     # Train on random data. You should replace this with your own data.
     batch = Batch(
-        surf_vars={k: torch.randn(1, 2, 721, 1440) for k in ("2t", "10u", "10v", "msl")},
-        static_vars={k: torch.randn(721, 1440) for k in ("lsm", "z", "slt")},
-        atmos_vars={k: torch.randn(1, 2, 13, 721, 1440) for k in ("z", "u", "v", "t", "q")},
+        surf_vars={k: torch.randn(1, 2, 721, 1440) for k in ("2m_temperature", "10m_u_component_of_wind", "10m_v_component_of_wind", "mean_sea_level_pressure")},
+        # static_vars={k: torch.randn(721, 1440) for k in ("lsm", "z", "slt")},
+        atmos_vars={k: torch.randn(1, 2, 13, 721, 1440) for k in ("geopotential", "u_component_of_wind", "v_component_of_wind", "temperature", "specific_humidity")},
         metadata=Metadata(
             lat=torch.linspace(90, -90, 721),
             lon=torch.linspace(0, 360, 1440 + 1)[:-1],
