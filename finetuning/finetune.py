@@ -1,11 +1,17 @@
 """Copyright (c) Microsoft Corporation. Licensed under the MIT license."""
+import os
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+
 from datetime import datetime
 
 import torch
 
 from aurora import AuroraPretrained, Batch, Metadata
 
-device = "cuda:3" if torch.cuda.is_available() else "cpu"
+import xarray as xr
+
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 print(f"Using device: {device}")
 
@@ -37,6 +43,9 @@ total = sum(p.numel() for p in model.parameters())
 print(f"Trainable rate: {trainable} / {total}")
 
 opt = torch.optim.AdamW(model.parameters(), lr=3e-4)
+
+zarr_path = '/mnt/era5/era5.zarr/'
+ds = xr.open_dataset(zarr_path, engine="zarr", chunks={})
 
 for i in range(10):
     print(f"Step {i}")
