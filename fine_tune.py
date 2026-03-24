@@ -57,7 +57,28 @@ total = sum(p.numel() for p in model.parameters())
 
 print(f"Trainable rate: {trainable} / {total}")
 
+batch = Batch(
+    surf_vars={
+        "2t": torch.randn(1, 1, 721, 1440),
+        "10u": torch.randn(1, 1, 721, 1440),
+        "10v": torch.randn(1, 1, 721, 1440),
+        "msl": torch.randn(1, 1, 721, 1440),
+    },
+    static_vars={
+        "lsm": torch.randn(1, 1, 721, 1440),
+        "z": torch.randn(1, 1, 721, 1440),
+        "slt": torch.randn(1, 1, 721, 1440),
+    },
+    atmos_vars={
+        "t": torch.randn(1, 13, 721, 1440),
+        "u": torch.randn(1, 13, 721, 1440),
+        "v": torch.randn(1, 13, 721, 1440),
+        "q": torch.randn(1, 13, 721, 1440),
+        "z": torch.randn(1, 13, 721, 1440),
+    },
+)
 
+# dataset = AuroraDataset(data_list)
 # dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
 
 # optimizer = torch.optim.AdamW(
