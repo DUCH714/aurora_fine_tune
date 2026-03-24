@@ -1,15 +1,11 @@
 """Copyright (c) Microsoft Corporation. Licensed under the MIT license."""
-import os
-
-os.environ["CUDA_VISIBLE_DEVICES"] = "3"
-
 from datetime import datetime
 
 import torch
 
 from aurora import AuroraPretrained, Batch, Metadata
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
+device = "cuda:3" if torch.cuda.is_available() else "cpu"
 
 print(f"Using device: {device}")
 
