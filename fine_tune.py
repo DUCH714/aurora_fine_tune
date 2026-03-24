@@ -9,6 +9,14 @@ class AuroraDataset(torch.utils.data.Dataset):
     def __init__(self, data_list):
         self.data = data_list
 
+        # 可以预定义（推荐）
+        self.metadata = {
+            "lat": torch.linspace(-90, 90, 721),
+            "lon": torch.linspace(0, 360, 1440),
+            "time": torch.tensor([0]),
+            "lead_time": torch.tensor([0]),
+        }
+
     def __len__(self):
         return len(self.data)
 
@@ -19,6 +27,7 @@ class AuroraDataset(torch.utils.data.Dataset):
             surf_vars=sample["surf_vars"],
             static_vars=sample["static_vars"],
             atmos_vars=sample["atmos_vars"],
+            metadata=self.metadata   # ✅ 加上这个
         )
 
 def loss_fn(pred, target):
