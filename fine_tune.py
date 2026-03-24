@@ -57,49 +57,41 @@ total = sum(p.numel() for p in model.parameters())
 
 print(f"Trainable rate: {trainable} / {total}")
 
-batch = Batch(
-    surf_vars={
-        "2t": torch.randn(1, 1, 721, 1440),
-        "10u": torch.randn(1, 1, 721, 1440),
-        "10v": torch.randn(1, 1, 721, 1440),
-        "msl": torch.randn(1, 1, 721, 1440),
-    },
-    static_vars={
-        "lsm": torch.randn(1, 1, 721, 1440),
-        "z": torch.randn(1, 1, 721, 1440),
-        "slt": torch.randn(1, 1, 721, 1440),
-    },
-    atmos_vars={
-        "t": torch.randn(1, 13, 721, 1440),
-        "u": torch.randn(1, 13, 721, 1440),
-        "v": torch.randn(1, 13, 721, 1440),
-        "q": torch.randn(1, 13, 721, 1440),
-        "z": torch.randn(1, 13, 721, 1440),
-    },
+data_list = [
+    {
+        "surf_vars": {
+            "2t": torch.randn(1, 721, 1440),
+        },
+        "static_vars": {
+            "lsm": torch.randn(1, 721, 1440),
+        },
+        "atmos_vars": {
+            "t": torch.randn(13, 721, 1440),
+        },
+    }
+]
+
+dataset = AuroraDataset(data_list)
+dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
+
+optimizer = torch.optim.AdamW(
+    filter(lambda p: p.requires_grad, model.parameters()),
+    lr=1e-4
 )
 
-# dataset = AuroraDataset(data_list)
-# dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
+for epoch in range(10):
+    for batch in dataloader:
+        batch = batch.to(device)
 
-# optimizer = torch.optim.AdamW(
-#     filter(lambda p: p.requires_grad, model.parameters()),
-#     lr=1e-4
-# )
+        pred = model(batch)
 
-# for epoch in range(10):
-#     for batch in dataloader:
-#         batch = batch.to(device)
+        loss = loss_fn(pred, batch)
 
-#         pred = model(batch)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
 
-#         loss = loss_fn(pred, batch)
+    print(f"Epoch {epoch}, Loss: {loss.item()}")
 
-#         optimizer.zero_grad()
-#         loss.backward()
-#         optimizer.step()
+torch.save(model.state_dict(), "aurora_lora_finetuned.pt")
 
-#     print(f"Epoch {epoch}, Loss: {loss.item()}")
-
-# torch.save(model.state_dict(), "aurora_lora_finetuned.pt")
-
-# dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
