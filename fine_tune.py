@@ -48,10 +48,15 @@ for name, param in model.named_parameters():
     if "lora" not in name.lower():
         param.requires_grad = False
 
+for name, param in model.named_parameters():
+    if param.requires_grad:
+        print(name)
+
 trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
 total = sum(p.numel() for p in model.parameters())
 
-print(f"Trainable: {trainable} / {total}")
+print(f"Trainable rate: {trainable} / {total}")
+
 
 # dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
 
