@@ -6,6 +6,7 @@ import torch
 
 from aurora import AuroraPretrained, Batch, Metadata
 
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 def loss(pred: Batch) -> torch.Tensor:
     """A sample loss function. You should replace this with your own loss function."""
@@ -18,7 +19,20 @@ model = AuroraPretrained(autocast=True)
 model.load_checkpoint()
 model.configure_activation_checkpointing()
 model.train()
-model = model.to("cuda")
+model = model.to(device)
+
+for name, param in model.named_parameters():
+    if "lora" not in name.lower():
+        param.requires_grad = False
+
+for name, param in model.named_parameters():
+    if param.requires_grad:
+        print(name)
+
+trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+total = sum(p.numel() for p in model.parameters())
+
+print(f"Trainable rate: {trainable} / {total}")
 
 opt = torch.optim.AdamW(model.parameters(), lr=3e-4)
 
@@ -39,7 +53,7 @@ for i in range(10):
     )
 
     opt.zero_grad()
-    prediction = model(batch.to("cuda"))
+    prediction = model(batch.to(device))
     loss_value = loss(prediction)
     loss_value.backward()
     opt.step()
