@@ -30,6 +30,39 @@ class AuroraDataset(torch.utils.data.Dataset):
             metadata=self.metadata   # ✅ 加上这个
         )
 
+def collate_fn(batch_list):
+    surf_vars = {}
+    atmos_vars = {}
+    static_vars = {}
+
+    # 拼接 surf_vars
+    for key in batch_list[0].surf_vars:
+        surf_vars[key] = torch.stack([
+            b.surf_vars[key] for b in batch_list
+        ])
+
+    # 拼接 atmos_vars
+    for key in batch_list[0].atmos_vars:
+        atmos_vars[key] = torch.stack([
+            b.atmos_vars[key] for b in batch_list
+        ])
+
+    # static_vars（通常不随batch变）
+    for key in batch_list[0].static_vars:
+        static_vars[key] = torch.stack([
+            b.static_vars[key] for b in batch_list
+        ])
+
+    # metadata（⚠️ 一般直接取第一个）
+    metadata = batch_list[0].metadata
+
+    return Batch(
+        surf_vars=surf_vars,
+        atmos_vars=atmos_vars,
+        static_vars=static_vars,
+        metadata=metadata
+    )
+
 def loss_fn(pred, target):
     loss = 0.0
     
@@ -81,7 +114,7 @@ data_list = [
 ]
 
 dataset = AuroraDataset(data_list)
-dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
+dataloader = DataLoader(dataset, batch_size=1, shuffle=True,collate_fn=collate_fn)
 
 optimizer = torch.optim.AdamW(
     filter(lambda p: p.requires_grad, model.parameters()),
