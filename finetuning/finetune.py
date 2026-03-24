@@ -6,7 +6,13 @@ import torch
 
 from aurora import AuroraPretrained, Batch, Metadata
 
+import os
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+
 device = "cuda" if torch.cuda.is_available() else "cpu"
+
+print(f"Using device: {device}")
 
 def loss(pred: Batch) -> torch.Tensor:
     """A sample loss function. You should replace this with your own loss function."""
@@ -57,3 +63,7 @@ for i in range(10):
     loss_value = loss(prediction)
     loss_value.backward()
     opt.step()
+
+    print(f"Step {i}, Loss: {loss_value.item():.3e}")
+
+torch.save(model.state_dict(), "aurora_lora_finetuned.pt")
