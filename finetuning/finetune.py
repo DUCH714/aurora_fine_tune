@@ -79,7 +79,7 @@ static_keys = {
 
 def _time_window_to_tensor(var_name: str, t0: int, t1: int) -> torch.Tensor:
     # Aurora expects surf vars as (B, H, Lat, Lon) and atmos vars as (B, H, L, Lat, Lon).
-    return torch.from_numpy(xarr[var_name].isel(time=slice(t0, t1 + 1)).values[None]).float()
+    return torch.tensor(xarr[var_name].isel(time=slice(t0, t1 + 1)).values[None], dtype=torch.float32)
 
 
 def _get_levels() -> tuple[int, ...]:
@@ -105,9 +105,9 @@ def _build_static_vars() -> dict[str, torch.Tensor]:
         if ds_name in xarr.data_vars:
             data = xarr[ds_name]
             if "time" in data.dims:
-                static_vars[aurora_name] = torch.from_numpy(data.isel(time=0).values).float()
+                static_vars[aurora_name] = torch.tensor(data.isel(time=0).values, dtype=torch.float32)
             else:
-                static_vars[aurora_name] = torch.from_numpy(data.values).float()
+                static_vars[aurora_name] = torch.tensor(data.values, dtype=torch.float32)
 
     return static_vars
 
@@ -138,8 +138,8 @@ for i in range(max_steps):
             if k in ("z", "u", "v", "t", "q")
         },
         metadata=Metadata(
-            lat=torch.from_numpy(xarr.latitude.values),
-            lon=torch.from_numpy(xarr.longitude.values),
+            lat=torch.tensor(xarr.latitude.values),
+            lon=torch.tensor(xarr.longitude.values),
             time=(xarr.time.values[t1].astype("datetime64[s]").tolist(),),
             atmos_levels=levels,
         ),
