@@ -131,8 +131,8 @@ levels = _get_levels()
 static_path = hf_hub_download(repo_id="microsoft/aurora",filename="aurora-0.25-wave-static.pickle",)
 with open(static_path, "rb") as f:
     static_vars = pickle.load(f)
-static_vars = {k: _to_tensor_copy(v, dtype=torch.float32) for k, v in static_vars.items()}
 # static_vars = _build_static_vars()
+static_vars = {k: _to_tensor_copy(v, dtype=torch.float32) for k, v in static_vars.items()}
 num_time_steps = xarr.sizes["time"]
 max_steps = min(10, num_time_steps - 1)
 
