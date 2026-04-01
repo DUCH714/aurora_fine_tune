@@ -4,6 +4,7 @@ import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
 import torch
+import numpy as np
 
 from aurora import AuroraPretrained, Batch, Metadata
 
@@ -77,9 +78,23 @@ static_keys = {
 }
 
 
+def _to_tensor_copy(data, dtype: torch.dtype | None = None) -> torch.Tensor:
+    """Convert array-like input to a Tensor backed by writable memory."""
+    if isinstance(data, torch.Tensor):
+        return data.to(dtype=dtype) if dtype is not None else data
+
+    array = np.asarray(data)
+    if not array.flags.writeable:
+        array = np.array(array, copy=True)
+
+    tensor = torch.from_numpy(array)
+    return tensor.to(dtype=dtype) if dtype is not None else tensor
+
+
 def _time_window_to_tensor(var_name: str, t0: int, t1: int) -> torch.Tensor:
     # Aurora expects surf vars as (B, H, Lat, Lon) and atmos vars as (B, H, L, Lat, Lon).
-    return torch.tensor(xarr[var_name].isel(time=slice(t0, t1 + 1)).values[None], dtype=torch.float32)
+    data = xarr[var_name].isel(time=slice(t0, t1 + 1)).values[None]
+    return _to_tensor_copy(data, dtype=torch.float32)
 
 
 def _get_levels() -> tuple[int, ...]:
@@ -105,9 +120,9 @@ def _build_static_vars() -> dict[str, torch.Tensor]:
         if ds_name in xarr.data_vars:
             data = xarr[ds_name]
             if "time" in data.dims:
-                static_vars[aurora_name] = torch.tensor(data.isel(time=0).values, dtype=torch.float32)
+                static_vars[aurora_name] = _to_tensor_copy(data.isel(time=0).values, dtype=torch.float32)
             else:
-                static_vars[aurora_name] = torch.tensor(data.values, dtype=torch.float32)
+                static_vars[aurora_name] = _to_tensor_copy(data.values, dtype=torch.float32)
 
     return static_vars
 
@@ -116,6 +131,7 @@ levels = _get_levels()
 static_path = hf_hub_download(repo_id="microsoft/aurora",filename="aurora-0.25-wave-static.pickle",)
 with open(static_path, "rb") as f:
     static_vars = pickle.load(f)
+static_vars = {k: _to_tensor_copy(v, dtype=torch.float32) for k, v in static_vars.items()}
 # static_vars = _build_static_vars()
 num_time_steps = xarr.sizes["time"]
 max_steps = min(10, num_time_steps - 1)
@@ -138,8 +154,8 @@ for i in range(max_steps):
             if k in ("z", "u", "v", "t", "q")
         },
         metadata=Metadata(
-            lat=torch.tensor(xarr.latitude.values),
-            lon=torch.tensor(xarr.longitude.values),
+            lat=_to_tensor_copy(xarr.latitude.values, dtype=torch.float32),
+            lon=_to_tensor_copy(xarr.longitude.values, dtype=torch.float32),
             time=(xarr.time.values[t1].astype("datetime64[s]").tolist(),),
             atmos_levels=levels,
         ),
