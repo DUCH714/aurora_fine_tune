@@ -8,6 +8,7 @@ import torch
 from aurora import AuroraPretrained, Batch, Metadata
 
 import xarray as xr
+from huggingface_hub import hf_hub_download
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -111,7 +112,10 @@ def _build_static_vars() -> dict[str, torch.Tensor]:
 
 
 levels = _get_levels()
-static_vars = _build_static_vars()
+static_path = hf_hub_download(repo_id="microsoft/aurora",filename="aurora-0.25-wave-static.pickle",)
+with open(static_path, "rb") as f:
+    static_vars = pickle.load(f)
+# static_vars = _build_static_vars()
 num_time_steps = xarr.sizes["time"]
 max_steps = min(10, num_time_steps - 1)
 
