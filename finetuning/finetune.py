@@ -9,6 +9,7 @@ from aurora import AuroraPretrained, Batch, Metadata
 
 import xarray as xr
 from huggingface_hub import hf_hub_download
+import pickle
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
