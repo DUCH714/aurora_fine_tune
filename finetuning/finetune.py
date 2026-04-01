@@ -3,8 +3,6 @@ import os
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
-from datetime import datetime
-
 import torch
 
 from aurora import AuroraPretrained, Batch, Metadata
@@ -17,8 +15,8 @@ print(f"Using device: {device}")
 
 def loss(pred: Batch) -> torch.Tensor:
     """A sample loss function. You should replace this with your own loss function."""
-    surf_values = prediction.surf_vars.values()
-    atmos_values = prediction.atmos_vars.values()
+    surf_values = pred.surf_vars.values()
+    atmos_values = pred.atmos_vars.values()
     return sum((x * x).sum() for x in tuple(surf_values) + tuple(atmos_values))
 
 
@@ -65,7 +63,7 @@ surf_keys = {
 atmos_keys = {
     "t": "temperature",
     "u": "u_component_of_wind",
-    "v": "v_component_of wind",
+    "v": "v_component_of_wind",
     "q": "specific_humidity",
     "z": "geopotential"
 }
@@ -75,19 +73,70 @@ static_keys = {
     "lsm": "land_sea_mask",          # 33.9% NaN
     "slt": "soil_type"
 }
-for i in range(10):
+
+
+def _time_window_to_tensor(var_name: str, t0: int, t1: int) -> torch.Tensor:
+    # Aurora expects surf vars as (B, H, Lat, Lon) and atmos vars as (B, H, L, Lat, Lon).
+    return torch.from_numpy(xarr[var_name].isel(time=slice(t0, t1 + 1)).values[None]).float()
+
+
+def _get_levels() -> tuple[int, ...]:
+    if "level" in xarr.coords:
+        return tuple(int(v) for v in xarr.level.values.tolist())
+    if "pressure_level" in xarr.coords:
+        return tuple(int(v) for v in xarr.pressure_level.values.tolist())
+    raise KeyError("Could not find level coordinate. Expected 'level' or 'pressure_level'.")
+
+
+def _build_static_vars() -> dict[str, torch.Tensor]:
+    lat_n = xarr.sizes["latitude"]
+    lon_n = xarr.sizes["longitude"]
+
+    # Some ERA5 exports do not include Aurora static vars; fall back to zeros to keep the loop runnable.
+    static_vars: dict[str, torch.Tensor] = {
+        "lsm": torch.zeros(lat_n, lon_n, dtype=torch.float32),
+        "z": torch.zeros(lat_n, lon_n, dtype=torch.float32),
+        "slt": torch.zeros(lat_n, lon_n, dtype=torch.float32),
+    }
+
+    for aurora_name, ds_name in static_keys.items():
+        if ds_name in xarr.data_vars:
+            data = xarr[ds_name]
+            if "time" in data.dims:
+                static_vars[aurora_name] = torch.from_numpy(data.isel(time=0).values).float()
+            else:
+                static_vars[aurora_name] = torch.from_numpy(data.values).float()
+
+    return static_vars
+
+
+levels = _get_levels()
+static_vars = _build_static_vars()
+num_time_steps = xarr.sizes["time"]
+max_steps = min(10, num_time_steps - 1)
+
+print('starting training loop')
+for i in range(max_steps):
     print(f"Step {i}")
 
-    # Train on random data. You should replace this with your own data.
+    t0, t1 = i, i + 1
     batch = Batch(
-        surf_vars={k: torch.randn(1, 2, 721, 1440) for k in ("2t", "10u", "10v", "msl")},
-        static_vars={k: torch.randn(721, 1440) for k in ("lsm", "z", "slt")},
-        atmos_vars={k: torch.randn(1, 2, 13, 721, 1440) for k in ("z", "u", "v", "t", "q")},
+        surf_vars={
+            k: _time_window_to_tensor(v, t0=t0, t1=t1)
+            for k, v in surf_keys.items()
+            if k in ("2t", "10u", "10v", "msl")
+        },
+        static_vars=static_vars,
+        atmos_vars={
+            k: _time_window_to_tensor(v, t0=t0, t1=t1)
+            for k, v in atmos_keys.items()
+            if k in ("z", "u", "v", "t", "q")
+        },
         metadata=Metadata(
-            lat=torch.linspace(90, -90, 721),
-            lon=torch.linspace(0, 360, 1440 + 1)[:-1],
-            time=(datetime(2020, 6, 1, 12, 0),),
-            atmos_levels=(50, 100, 150, 200, 250, 300, 400, 500, 600, 700, 850, 925, 1000),
+            lat=torch.from_numpy(xarr.latitude.values),
+            lon=torch.from_numpy(xarr.longitude.values),
+            time=(xarr.time.values[t1].astype("datetime64[s]").tolist(),),
+            atmos_levels=levels,
         ),
     )
 
