@@ -24,9 +24,10 @@ def loss(pred: Batch) -> torch.Tensor:
 
 base_model = AuroraPretrained(autocast=True)
 base_model.load_checkpoint()
-model = AuroraPretrained(use_lora=True)
+model = AuroraPretrained(use_lora=True, autocast=True)
 model.load_state_dict(base_model.state_dict(), strict=False)
 model.train()
+model.configure_activation_checkpointing()
 model = model.to(device)
 
 for name, param in model.named_parameters():
@@ -48,15 +49,40 @@ zarr_path = '/mnt/era5/era5.zarr/'
 xarr = xr.open_dataset(zarr_path, engine="zarr", chunks="auto")
 xarr = xarr.sel(time=slice('2019-01-01', '2019-01-10'))
 
+surf_keys = {
+    "2t": "2m_temperature",
+    "10u": "10m_u_component_of_wind",
+    "10v": "10m_v_component_of_wind",
+    "msl": "mean_sea_level_pressure",  # 33.9% NaN
+    "sp": "surface_pressure",
+    "tp6h": "total precipitation_6hr",
+    "tcc": "total_cloud_cover",
+    "sd": "snow_depth",
+    "sst": "sea_surface_temperature",
+    "siconc": "sea_ice_cover"
+}
 
+atmos_keys = {
+    "t": "temperature",
+    "u": "u_component_of_wind",
+    "v": "v_component_of wind",
+    "q": "specific_humidity",
+    "z": "geopotential"
+}
+
+static_keys = {
+    "z": "geopotential_at_surface",  # 33.9% NaN
+    "lsm": "land_sea_mask",          # 33.9% NaN
+    "slt": "soil_type"
+}
 for i in range(10):
     print(f"Step {i}")
 
     # Train on random data. You should replace this with your own data.
     batch = Batch(
-        surf_vars={k: torch.randn(1, 2, 721, 1440) for k in ("2m_temperature", "10m_u_component_of_wind", "10m_v_component_of_wind", "mean_sea_level_pressure")},
+        surf_vars={k: torch.randn(1, 2, 721, 1440) for k in ("2t", "10u", "10v", "msl")},
         static_vars={k: torch.randn(721, 1440) for k in ("lsm", "z", "slt")},
-        atmos_vars={k: torch.randn(1, 2, 13, 721, 1440) for k in ("geopotential", "u_component_of_wind", "v_component_of_wind", "temperature", "specific_humidity")},
+        atmos_vars={k: torch.randn(1, 2, 13, 721, 1440) for k in ("z", "u", "v", "t", "q")},
         metadata=Metadata(
             lat=torch.linspace(90, -90, 721),
             lon=torch.linspace(0, 360, 1440 + 1)[:-1],
