@@ -55,7 +55,7 @@ for i in range(10):
     # Train on random data. You should replace this with your own data.
     batch = Batch(
         surf_vars={k: torch.randn(1, 2, 721, 1440) for k in ("2m_temperature", "10m_u_component_of_wind", "10m_v_component_of_wind", "mean_sea_level_pressure")},
-        # static_vars={k: torch.randn(721, 1440) for k in ("lsm", "z", "slt")},
+        static_vars={k: torch.randn(721, 1440) for k in ("lsm", "z", "slt")},
         atmos_vars={k: torch.randn(1, 2, 13, 721, 1440) for k in ("geopotential", "u_component_of_wind", "v_component_of_wind", "temperature", "specific_humidity")},
         metadata=Metadata(
             lat=torch.linspace(90, -90, 721),
